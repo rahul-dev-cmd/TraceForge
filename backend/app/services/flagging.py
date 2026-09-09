@@ -1,5 +1,5 @@
 import logging
-from datetime import timedelta
+from datetime import datetime, timezone, timedelta
 from typing import List, Tuple, Optional, Dict, Any, Set
 import numpy as np
 from sqlalchemy.orm import Session
@@ -7,6 +7,7 @@ from sqlalchemy import or_
 
 from app.models.wallet import Wallet
 from app.models.transaction import Transaction
+from app.models.alert import Alert
 from app.services.etherscan import normalize_address
 from app.ml.model_loader import predict_structuring_risk
 
@@ -240,10 +241,91 @@ def get_ml_risk_score(address: str, transactions: List[Transaction]) -> Optional
 
 class FlaggingService:
     @staticmethod
-    def evaluate_wallet(db: Session, address: str) -> Dict[str, Any]:
+    def create_alert_from_eval(
+        db: Session,
+        eval_res: Dict[str, Any],
+        tx_hash: Optional[str] = None
+    ) -> Optional[Alert]:
+        """
+        Create and persist a real Alert row in the database based on evaluation results.
+        Derives severity, reason string, and risk score using standard TraceForge AML rules.
+        """
+        if not eval_res:
+            return None
+
+        norm_addr = eval_res.get("address")
+        if not norm_addr:
+            return None
+
+        triggered_rules = [
+            f.get("type", "unknown")
+            for f in eval_res.get("flags", [])
+            if f.get("triggered")
+        ]
+        ml_score = eval_res.get("risk_score")
+        has_high_ml = ml_score is not None and ml_score >= 0.7
+
+        if not triggered_rules and not has_high_ml:
+            return None
+
+        reasons = list(triggered_rules)
+        if has_high_ml and "high_ml_risk" not in reasons:
+            reasons.append("high_ml_risk")
+        reason_str = ", ".join(reasons)
+
+        # Derive severity from ML score and rule trigger count
+        if (ml_score is not None and ml_score >= 0.85) or len(triggered_rules) >= 2:
+            severity = "critical"
+        elif (ml_score is not None and ml_score >= 0.7) or len(triggered_rules) == 1:
+            severity = "high"
+        elif ml_score is not None and ml_score >= 0.5:
+            severity = "medium"
+        else:
+            severity = "low"
+
+        # Check if an alert already exists for this tx_hash (or address + reason if no tx_hash)
+        if tx_hash:
+            existing_alert = db.query(Alert).filter(Alert.tx_hash == tx_hash).first()
+            if existing_alert:
+                return existing_alert
+        else:
+            existing_alert = db.query(Alert).filter(
+                Alert.wallet_address == norm_addr,
+                Alert.reason == reason_str
+            ).first()
+            if existing_alert:
+                return existing_alert
+
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        alert = Alert(
+            wallet_address=norm_addr,
+            tx_hash=tx_hash,
+            reason=reason_str,
+            severity=severity,
+            risk_score=ml_score,
+            created_at=now,
+        )
+        db.add(alert)
+        db.commit()
+        db.refresh(alert)
+        return alert
+
+    @staticmethod
+    def evaluate_wallet(
+        db: Session,
+        address: str,
+        create_alert: bool = False,
+        tx_hash: Optional[str] = None
+    ) -> Dict[str, Any]:
         """
         Evaluate all AML heuristic rules and ML risk scoring for a given wallet address.
         
+        Args:
+            db: Active SQLAlchemy database session.
+            address: Ethereum wallet address.
+            create_alert: If True and wallet is flagged, creates and persists an Alert row.
+            tx_hash: Optional trigger transaction hash to associate with the created Alert.
+            
         Raises:
             ValueError: If address has no ingested transactions in DB.
         """
@@ -292,9 +374,16 @@ class FlaggingService:
             wallet.flagged = overall_flagged
             db.commit()
 
-        return {
+        res: Dict[str, Any] = {
             "address": norm_addr,
             "flags": flags,
             "risk_score": ml_score,
             "overall_flagged": overall_flagged
         }
+
+        if create_alert and overall_flagged:
+            alert = FlaggingService.create_alert_from_eval(db, res, tx_hash=tx_hash)
+            if alert:
+                res["alert"] = alert
+
+        return res

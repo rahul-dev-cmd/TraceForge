@@ -110,55 +110,24 @@ async def process_transaction(tx: Dict[str, Any]) -> None:
                     if _wallet_last_evaluated[k] < cutoff:
                         del _wallet_last_evaluated[k]
 
-            # d. Call FlaggingService.evaluate_wallet(db, from_address)
+            # d. Call FlaggingService.evaluate_wallet(db, from_address, create_alert=True, tx_hash=tx_hash)
             try:
-                eval_res = FlaggingService.evaluate_wallet(db, from_addr)
+                eval_res = FlaggingService.evaluate_wallet(db, from_addr, create_alert=True, tx_hash=tx_hash)
             except ValueError as val_err:
                 logger.debug(f"Wallet evaluation skipped for {from_addr}: {val_err}")
                 eval_res = None
 
-            # e. If any rule is flagged or ML score >= 0.7, create an Alert row
+            # e. Log clearly if an AML alert was created through FlaggingService
             if eval_res:
-                triggered_rules = [
-                    f.get("type", "unknown")
-                    for f in eval_res.get("flags", [])
-                    if f.get("triggered")
-                ]
-                ml_score = eval_res.get("risk_score")
-                has_high_ml = ml_score is not None and ml_score >= 0.7
+                alert = eval_res.get("alert")
+                if not alert and eval_res.get("overall_flagged"):
+                    alert = FlaggingService.create_alert_from_eval(db, eval_res, tx_hash=tx_hash)
 
-                if triggered_rules or has_high_ml:
-                    reasons = list(triggered_rules)
-                    if has_high_ml and "high_ml_risk" not in reasons:
-                        reasons.append("high_ml_risk")
-                    reason_str = ", ".join(reasons)
-
-                    # Derive severity from ML score and rule trigger count
-                    if (ml_score is not None and ml_score >= 0.85) or len(triggered_rules) >= 2:
-                        severity = "critical"
-                    elif (ml_score is not None and ml_score >= 0.7) or len(triggered_rules) == 1:
-                        severity = "high"
-                    elif ml_score is not None and ml_score >= 0.5:
-                        severity = "medium"
-                    else:
-                        severity = "low"
-
-                    alert = Alert(
-                        wallet_address=from_addr,
-                        tx_hash=tx_hash,
-                        reason=reason_str,
-                        severity=severity,
-                        risk_score=ml_score,
-                        created_at=datetime.now(timezone.utc).replace(tzinfo=None),
-                    )
-                    db.add(alert)
-                    db.commit()
-
-                    # g. Log clearly when an alert is created
+                if alert:
                     logger.warning(
                         f"🚨 [AML ALERT CREATED] Address: {from_addr} | "
-                        f"Severity: {severity.upper()} | Reason: {reason_str} | "
-                        f"Risk Score: {ml_score} | Tx: {tx_hash}"
+                        f"Severity: {alert.severity.upper()} | Reason: {alert.reason} | "
+                        f"Risk Score: {alert.risk_score} | Tx: {tx_hash}"
                     )
 
     # h. Wrap all of this in try/except so one bad transaction doesn't crash the listener
