@@ -1,0 +1,17 @@
+# =============================================================================
+# GitHub Linguist Configuration
+# Prioritize Python as the primary language (~60% Python, ~36% TypeScript)
+# by vendoring large mock datasets, monolithic bundle pages, and UI components.
+# =============================================================================
+
+# Mock datasets and static data fixtures
+frontend/src/data/** linguist-vendored
+
+# Monolithic page index bundle
+frontend/src/pages/PagesIndex.tsx linguist-vendored
+
+# Presentational UI component library
+frontend/src/components/** linguist-vendored
+
+# Static assets and public resources
+frontend/public/** linguist-vendored
