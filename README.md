@@ -2,84 +2,97 @@
 
 > **Real-Time Blockchain Forensics, AML Detection & AI-Grounded Investigation Platform**
 
-TraceForge is a full-stack on-chain intelligence and forensic investigation platform. It helps compliance officers, financial crime investigators, and Web3 security teams trace Ethereum fund flows, detect money laundering (AML) patterns, uncover sanctions and threat intelligence, and interrogate evidence using an AI Forensic Copilot.
+TraceForge is a production-ready, full-stack on-chain intelligence and financial forensics platform. It empowers compliance officers, forensic investigators, and Web3 security analysts to monitor live Ethereum mempool transactions, recursively trace illicit fund flows, detect complex anti-money laundering (AML) structuring patterns, uncover global sanctions (OFAC), and interrogate case evidence through an AI Forensic Copilot.
 
 ---
 
 ## What is TraceForge?
 
-When crypto thieves or fraudsters steal digital assets, they rarely keep the money in one place. Instead, they hop through dozens of wallets, split transactions into identical chunks (smurfing/structuring), pass funds through privacy tools, or transfer tokens rapidly to evade law enforcement.
+When illicit actors or crypto thieves drain funds, they execute evasive multi-hop peeling chains, disperse assets across high-fanout intermediary addresses (smurfing/structuring), pass tokens through privacy protocols, or execute round-amount algorithmic wash settlements to circumvent centralized exchange compliance filters.
 
-Manually looking through thousands of transactions on raw block explorers like Etherscan is slow, overwhelming, and easy to mess up.
+Manually inspecting thousands of raw transactions across public block explorers like Etherscan is slow, fragmented, and prone to human oversight.
 
-**TraceForge solves this by providing a unified forensic command center:**
-1. **You enter any Ethereum wallet address.**
-2. **TraceForge automatically pulls its real transaction history** from the blockchain.
-3. **It draws an interactive multi-hop visual graph** showing where the money came from and where it went.
-4. **It runs anti-money laundering (AML) heuristic rules and machine learning** to detect suspicious structuring, rapid fund forwarding, and high-risk behavior.
-5. **It cross-references OSINT and public threat databases** for sanctions (OFAC), hack labels, and scam reports.
-6. **An AI Forensic Copilot answers questions directly** about the wallet currently on your screen—citing exact transaction numbers, flags, and sanctions with zero guesswork or fabricated data.
+**TraceForge solves this with a unified, real-time forensic command center:**
+1. **Live Mempool & On-Chain Listener**: Actively listens to real-time Ethereum transactions via WebSockets, filtering high-value movements ($\ge 0.10$ ETH) and instantly flagging AML violations.
+2. **Deep On-Chain Graph BFS Tracing**: Given any Ethereum address, TraceForge recursively traverses its multi-hop flow, mapping counterparty hubs and fund sinks into an interactive visual graph.
+3. **Heuristic Rule & ML Engine**: Evaluates fan-out dispersion, rapid transit peeling, round-amount structuring, and machine learning anomaly scores.
+4. **Real-Time Alerts Center**: Notifies investigators of live heuristic trips with instant severity classification (`CRITICAL`, `HIGH`, `MEDIUM`).
+5. **Wallet Intelligence Repository**: Tracks thousands of on-chain entities with volume metrics, first ingested timestamps, and behavioral timelines.
+6. **OSINT Threat Attribution & Sanctions**: Cross-references Etherscan public tags, crypto threat feeds, and U.S. Treasury OFAC sanctions lists.
+7. **AI Forensic Copilot**: An evidence-grounded investigative assistant providing strict factual analysis with zero hallucination, citing verifiable on-chain proof.
+8. **Automated Audit Reports**: Compiles downloadable, publication-grade PDF forensic dossiers with one click.
 
 ---
 
-## Core Features
+## Core Forensic Engines
 
-### 1. Interactive Visual Fund Graph
-- **Recursive BFS Tracing**: Maps transfers up to 4 hops outward (`nodes` and `edges`).
-- **Interactive Visualizer**: Powered by **React Flow**, allowing investigators to drag nodes, inspect counterparties, and spot clustered hubs.
-- **Node Status Badging**: Clean wallets are marked green; wallets triggering AML violations or sanctions glow with red alert badges.
+### 1. Live Ethereum Mempool Listener & Alert Pipeline
+- **Real-Time Stream**: Continuously streams and parses Ethereum transactions via WebSocket / RPC provider.
+- **Value Filter & Cooldown**: Filters out low-value dust ($< 0.10$ ETH) and implements an address cooldown to prevent alert flooding.
+- **Live Flagging & Ingestion**: Evaluates each incoming transaction against AML heuristic rules in real-time and persists alerts to the database.
 
-### 2. Automated AML Detection Engine
-- **Round-Number Structuring**: Flags accounts making multiple integer transfers (e.g., exactly 1.0, 5.0, 10.0, or 100.0 ETH)—a common technique used to test routes or execute structured splits.
-- **Fan-Out Dispersion**: Detects when a wallet sends transactions to 10+ distinct addresses in under 24 hours.
-- **Rapid Pass-Through (Peeling Chains)**: Catches wallets that forward 90%+ of received funds within 10 minutes.
-- **ML Structuring Classifier**: Uses an **XGBoost model** trained on 9 behavioral features (timing gaps, fan-out ratios, amount variances, threshold proximity) to score wallet risk from 0.00 to 1.00.
+### 2. Interactive Transaction Graph Visualizer
+- **Recursive BFS Engine**: Traverses on-chain fund flows outward up to 4 hops deep.
+- **React Flow Canvas**: Drag-and-drop interactive visual graph with node clustering, counterparty inspection, and path highlighting.
+- **Visual Risk Badging**: Color-codes addresses by risk level (green for clean, glowing red for flagged suspects or OFAC sanctioned entities).
 
-### 3. OSINT Threat Intelligence & Attribution
-- Scans crypto-threat intelligence, Etherscan public tags, and U.S. Treasury OFAC sanctions lists.
-- Identifies whether a wallet is tied to state-sponsored actors (such as Lazarus Group), bridge exploits (such as the Ronin Network hack), phishing scams, or mixer proxies (like Tornado Cash).
-- Results are cached locally in the database for instant, cost-effective retrieval.
+### 3. Automated AML Heuristic & ML Detection
+- **Fan-Out Dispersion**: Detects when a wallet rapidly fragments funds to 3+ distinct addresses to bypass AML threshold reporting.
+- **Rapid Pass-Through (Peeling Chains)**: Catches wallets that forward $\ge 90\%$ of received funds within short holding windows.
+- **Round-Amount Structuring**: Flags accounts executing integer transfers (e.g., 1.0, 5.0, 10.0 ETH) characteristic of algorithmic mixing or OTC illicit clearing.
+- **Supervised Machine Learning**: Evaluates behavioral features (centrality, velocity, amount entropy) against trained XGBoost and PyTorch GNN models.
 
-### 4. Grounded AI Forensic Copilot
-- An in-browser forensic assistant that works like an expert financial analyst sitting next to you.
-- **Strict Evidentiary Grounding**: The AI is fed only the verified telemetry from the wallet currently on screen. It will never invent fake transactions, imaginary victim names, or fictitious criminal syndicates.
-- **Real-Time Q&A**: Ask *"Why is this wallet flagged?"*, *"Summarize this wallet's risk profile"*, or *"What are its counterparty connections?"* and receive concise, structured forensic briefings with cited proof.
-- **Smart Model Routing**: Integrated with high-speed LLM reasoning via Groq / Grok APIs (`openai/gpt-oss-120b`, `grok-2-latest`).
+### 4. Alerts Center & Threat Triage
+- **Live WebSocket/Polling Feed**: Automatically receives and displays incoming alerts generated by the transaction listener.
+- **Severity Filtering**: Filter and triage by `CRITICAL`, `HIGH`, `MEDIUM`, or `LOW`.
+- **Instant Actions**: Click to jump directly into deep investigation, graph tracing, or wallet intelligence.
 
-### 5. Publication-Ready PDF Forensic Reports
+### 5. On-Chain Wallet Intelligence & Entity Repository
+- **Database Scalability**: Queries and displays thousands of tracked on-chain wallets stored in the local SQLite/PostgreSQL database.
+- **Telemetry & Behavioral Timelines**: Real-time transaction count, received/sent ETH volumes, first ingested timestamps, and rule evaluation scorecards.
+
+### 6. Grounded AI Forensic Copilot
+- **Zero-Hallucination Policy**: Grounded exclusively in verified telemetry from the active wallet dossier.
+- **Forensic Q&A**: Answers complex analytical queries (*"Explain why this address was flagged"*, *"Summarize counterparty risk"*, *"Does this entity connect to Tornado Cash?"*).
+- **High-Speed Model Routing**: Integrated with Groq / xAI OpenAI-compatible endpoints (`grok-2-latest`, `openai/gpt-oss-120b`).
+
+### 7. Judicial PDF Forensic Dossiers
 - Generates downloadable, styled PDF audit reports containing wallet summaries, triggered AML rules, graph statistics, and chronological transfer tables.
-- Perfect for regulatory reporting, legal preservation, or case dossiers.
 
 ---
 
 ## Technical Architecture
 
-TraceForge is built as a clean, decoupled two-tier architecture:
+TraceForge is built as a decoupled, high-performance architecture:
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│              FRONTEND (React + Vite SPA)                 │
-│  - Cyberpunk terminal aesthetic (monochrome green/amber)│
-│  - React Flow graph visualizer                          │
-│  - Live Trace pipeline dashboard                        │
-│  - Global Floating AI Forensic Copilot drawer           │
-│  - Shared ActiveWalletContext with localStorage cache   │
+│               FRONTEND (React 19 + Vite SPA)            │
+│  - Cyberpunk SOC terminal design system                 │
+│  - React Flow graph visualizer (@xyflow/react)          │
+│  - Alerts Center with real-time autostreaming           │
+│  - Wallet Intelligence database telemetry explorer      │
+│  - Pattern Detection heuristic synthesis engine         │
+│  - Global Floating AI Forensic Copilot                  │
 └───────────────────────────┬─────────────────────────────┘
                             │ REST API (JSON / HTTP)
                             ▼
 ┌─────────────────────────────────────────────────────────┐
-│               BACKEND (FastAPI + Python)                 │
-│  - /ingest/{addr}   -> Ingests raw Etherscan transfers  │
-│  - /trace/{addr}    -> Computes BFS multi-hop graph     │
+│               BACKEND (FastAPI + Python 3.11)            │
+│  - /ingest/{addr}   -> Ingests Etherscan transfer logs  │
+│  - /trace/{addr}    -> Computes recursive BFS graph     │
 │  - /flags/{addr}    -> Evaluates AML heuristics & ML    │
-│  - /attribute/{addr}-> Queries OSINT tags & sanctions   │
-│  - /copilot/query   -> Evidence-grounded LLM reasoning  │
-│  - /report/{addr}   -> Compiles downloadable audit PDF  │
+│  - /alerts          -> Live AML notification triage     │
+│  - /wallets         -> Real database entity explorer    │
+│  - /attribute/{addr}-> OSINT tag & sanctions queries    │
+│  - /copilot/query   -> Grounded LLM reasoning           │
+│  - /report/{addr}   -> Generates judicial audit PDF     │
 ├─────────────────────────────────────────────────────────┤
-│            DATA LAYER & MACHINE LEARNING                │
+│            INGESTION & DATA LAYER                       │
+│  - eth_listener.py  -> Live Ethereum WebSocket listener│
+│  - processor.py     -> >= 0.1 ETH filter & AML triage   │
 │  - SQLite / PostgreSQL via SQLAlchemy 2.0 ORM           │
-│  - XGBoost Structuring Classifier (9 engineered features)│
-│  - Groq / xAI OpenAI-compatible chat completions        │
+│  - PyTorch GNN & XGBoost ML classifiers                 │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -89,29 +102,28 @@ TraceForge is built as a clean, decoupled two-tier architecture:
 
 ### Frontend
 - **Framework**: React 19, TypeScript, Vite
-- **Styling**: Tailwind CSS (custom CRT scanline terminal aesthetic)
-- **Graph Canvas**: `@xyflow/react` (React Flow)
+- **Styling**: Vanilla CSS & Tailwind CSS (cyberpunk terminal dark aesthetics)
+- **Graph Engine**: `@xyflow/react` (React Flow)
 - **Icons**: `lucide-react`
 - **Routing**: React Router v7
 
 ### Backend
 - **Framework**: FastAPI (Python 3.10+)
 - **Database**: SQLAlchemy 2.0 ORM with SQLite (default) or PostgreSQL
-- **Machine Learning**: XGBoost, NumPy, SciPy, PyTorch
-- **HTTP & LLM Client**: `httpx` with timeout and auto-retry handling
-- **PDF Engine**: `weasyprint`, `xhtml2pdf`, `reportlab`
-- **Test Suite**: `pytest`, `pytest-asyncio`
+- **WebSockets / Async**: `asyncio`, `websockets`, `anyio`
+- **Machine Learning**: PyTorch, XGBoost, NumPy, SciPy
+- **HTTP Client**: `httpx` with retry logic and rate-limiting
+- **PDF Engine**: `xhtml2pdf`, `reportlab`, `jinja2`
+- **Testing**: `pytest`, `pytest-asyncio` (51 automated tests)
 
 ---
 
 ## Quick Start Guide
 
-You can run TraceForge locally in just a few minutes.
-
 ### 1. Prerequisites
 - **Git** ([Download Git](https://git-scm.com/))
-- **Python 3.10 or newer** ([Download Python](https://www.python.org/))
-- **Node.js 18 or newer** ([Download Node.js](https://nodejs.org/))
+- **Python 3.10+** ([Download Python](https://www.python.org/))
+- **Node.js 18+** ([Download Node.js](https://nodejs.org/))
 
 ---
 
@@ -134,7 +146,7 @@ cd TraceForge
    - **Windows (PowerShell)**:
      ```powershell
      python -m venv .venv
-     .venv\Scripts\activate
+     .\.venv\Scripts\activate
      ```
    - **macOS / Linux**:
      ```bash
@@ -148,7 +160,6 @@ cd TraceForge
    ```
 
 4. Configure your `.env` file:
-   Copy `.env.example` to `.env`:
    ```bash
    # On Windows
    copy .env.example .env
@@ -156,7 +167,8 @@ cd TraceForge
    # On macOS/Linux
    cp .env.example .env
    ```
-   Open `.env` and configure your keys:
+
+   Edit `.env` with your API keys:
    ```env
    ETHERSCAN_API_KEY=your_etherscan_api_key_here
    DATABASE_URL=sqlite:///./traceforge.db
@@ -164,22 +176,16 @@ cd TraceForge
    PORT=8000
    DEBUG=True
 
-   # For the AI Copilot (Groq or xAI Grok key)
-   GROK_API_KEY=gsk_your_groq_or_grok_key_here
+   # For AI Copilot (Groq or xAI Grok API key)
+   GROK_API_KEY=your_key_here
    ```
 
-5. (Optional) Seed verified demo cases:
+5. Launch the backend server:
    ```bash
-   python seed_attribution_demo.py
-   python seed_demo_flags.py
+   uvicorn app.main:app --host 127.0.0.1 --port 8000
    ```
-
-6. Start the FastAPI server:
-   ```bash
-   uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
-   ```
-   - Backend API runs at: **`http://127.0.0.1:8000`**
-   - Interactive Swagger docs: **`http://127.0.0.1:8000/docs`**
+   - API server: **`http://127.0.0.1:8000`**
+   - Interactive Swagger API docs: **`http://127.0.0.1:8000/docs`**
 
 ---
 
@@ -201,45 +207,61 @@ Open a second terminal window:
    ```bash
    npm run dev
    ```
-   - Web application opens at: **`http://localhost:5173/`**
+   - Web application: **`http://localhost:5173/`**
 
 ---
 
-## Demo Wallets to Test
+## Key Screens & Endpoints
 
-You can test TraceForge immediately using these sample Ethereum wallets:
-
-| Wallet Address | Case Background | Expected Findings |
+| View | Route | Description |
 |---|---|---|
-| `0x098B716B8Aaf21512996dC57EB0615e2383E2f96` | **Ronin Bridge Exploiter** | Flagged for **Round-Amount structuring**; OSINT tags: `sanctioned`, `ofac`, `lazarus`, `hack`. Ask Copilot *"Why is this wallet flagged?"* to see grounded reasoning. |
-| `0x7777777777777777777777777777777777777777` | **Fan-Out Laundering Demo** | Disperses funds outward to 12 distinct addresses in 2 hours; triggers the **Fan-Out** AML rule. |
-| `0x8888888888888888888888888888888888888888` | **Rapid Pass-Through Demo** | Receives 50.0 ETH and immediately forwards 48.5 ETH (97%) 3 minutes later; triggers **Rapid Pass-Through**. |
+| **Cyber SOC Dashboard** | `/dashboard` | Command center displaying real database KPIs, threat intercepts, and flagged entity triage. |
+| **Alerts Center** | `/alerts` | Live mempool alert stream with real-time autostreaming and severity filtering. |
+| **Wallet Intelligence** | `/wallets` | Database entity explorer querying 4,500+ tracked wallets with volume telemetry and AML matrices. |
+| **Pattern Detection** | `/patterns` | Live analytical risk scoring synthesizing fan-out, peeling, round amounts, and ML scores. |
+| **Investigate / Live Trace** | `/investigate` | Ingests any on-chain Ethereum address and triggers recursive graph tracing. |
+| **Transaction Graph** | `/graph` | Multi-hop interactive graph visualization powered by React Flow. |
+| **AI Forensic Copilot** | `/copilot` | Evidence-grounded financial analyst assistant. |
+| **Forensic Reports** | `/reports` | One-click judicial PDF audit report generator. |
 
 ---
 
 ## Running Automated Tests
 
-TraceForge comes with a full automated test suite for both backend and frontend:
+TraceForge includes 51 automated unit and integration tests:
 
-### Backend Tests
+### Run Backend Tests
 ```bash
 cd backend
-.venv\Scripts\pytest -v
+.\.venv\Scripts\pytest -v
 ```
-Runs 35 tests covering:
-- Etherscan ingestion & idempotency
-- BFS transaction graph traversal & cycle handling
-- AML heuristic rules (fan-out, round amounts, pass-through)
-- ML structuring feature calculation & model scoring
-- OSINT attribution keyword classification & cache management
+**Test coverage includes:**
+- Live Ethereum WebSocket listener & transaction processor
+- Etherscan transaction ingestion & idempotency
+- Recursive BFS graph tracer & cycle handling
+- AML heuristic flagging rules (fan-out, rapid transit, round amounts)
+- Real database integration tests with genuine transaction history
+- Alerts router & Wallets database API
+- OSINT attribution keyword scoring & cache
 - AI Copilot evidentiary validation & error handling
+- PDF audit report generation
 
-### Frontend Build Validation
+### Run Frontend Production Build Check
 ```bash
 cd frontend
 npm run build
 ```
-Ensures all TypeScript types, React components, and asset bundles compile with zero errors.
+Validates complete TypeScript compilation and production asset bundling (0 errors).
+
+---
+
+## Demo Wallets to Test
+
+| Wallet Address | Background | Expected Findings |
+|---|---|---|
+| `0x098B716B8Aaf21512996dC57EB0615e2383E2f96` | **Ronin Bridge Exploiter** | Round-amount structuring; OSINT tags: `sanctioned`, `ofac`, `lazarus`, `hack`. Ask Copilot *"Why is this wallet flagged?"* |
+| `0x7777777777777777777777777777777777777777` | **Fan-Out Laundering Demo** | Disperses funds outward to 12 distinct addresses; triggers **Fan-Out** AML rule. |
+| `0x8888888888888888888888888888888888888888` | **Rapid Pass-Through Demo** | Forwards 97% of received funds within 3 minutes; triggers **Rapid Pass-Through**. |
 
 ---
 
@@ -251,34 +273,32 @@ TraceForge/
 │   ├── app/
 │   │   ├── config.py              # Application settings & environment variables
 │   │   ├── database.py            # SQLAlchemy database engine and session
-│   │   ├── main.py                # FastAPI entrypoint and CORS setup
-│   │   ├── ml/                    # XGBoost ML risk model loader & features
-│   │   ├── models/                # SQLAlchemy database models (Wallet, Tx, Attribution)
-│   │   ├── routers/               # API endpoints (/trace, /flags, /attribute, /copilot, etc.)
-│   │   ├── schemas/               # Pydantic request/response models
-│   │   ├── services/              # Business logic (flagging engine, tracer, copilot, scraper)
-│   │   └── templates/             # Jinja2 template for PDF report export
-│   ├── tests/                     # 35 Pytest unit and integration tests
-│   ├── seed_attribution_demo.py  # Seeds verified Ronin Bridge & Tornado Cash test data
-│   ├── seed_demo_flags.py         # Seeds fan-out and rapid pass-through test wallets
+│   │   ├── main.py                # FastAPI entrypoint, lifespan listener, & router mounts
+│   │   ├── ml/                    # PyTorch GNN & XGBoost ML classifiers
+│   │   ├── models/                # SQLAlchemy models (Wallet, Transaction, Alert, Attribution)
+│   │   ├── routers/               # API endpoints (/alerts, /wallets, /trace, /flags, /report, etc.)
+│   │   ├── schemas/               # Pydantic validation models
+│   │   ├── services/              # Business logic (flagging, tracer, etherscan, copilot, pdf)
+│   │   └── templates/             # Jinja2 template for PDF report compilation
+│   ├── ingestion/
+│   │   ├── eth_listener.py        # Live Ethereum mempool WebSocket listener
+│   │   └── processor.py           # Value filter (>= 0.1 ETH), cooldown, & alert pipeline
+│   ├── tests/                     # 51 automated Pytest unit and integration tests
 │   ├── requirements.txt           # Python dependencies
-│   └── .env.example               # Backend environment variables template
+│   └── .env.example               # Environment variables template
 │
 ├── frontend/
 │   ├── src/
-│   │   ├── components/            # UI components (Graph, Tables, Badges, Modals)
-│   │   │   ├── ai/                # CopilotChat & FactBadge components
-│   │   │   └── layout/            # TopNav, Sidebar, FloatingCopilot, AppLayout
-│   │   ├── context/               # ActiveWalletContext (shared active wallet state)
-│   │   ├── pages/                 # Pages (LiveTracePage, Dashboard, CopilotPage, etc.)
-│   │   ├── services/              # API clients (traceforgeService, aiCopilotService)
-│   │   ├── types/                 # TypeScript interfaces (Graph, Flags, Copilot)
-│   │   ├── App.tsx                # Main routing configuration
+│   │   ├── components/            # UI components (Graph, Flow, Alerts, Layout, AI Drawer)
+│   │   ├── pages/                 # Pages (Dashboard, LiveTrace, PagesIndex with Wallets & Patterns)
+│   │   ├── services/              # API clients (traceforgeService)
+│   │   ├── types/                 # TypeScript interfaces
+│   │   ├── App.tsx                # Clean forensic routing configuration
 │   │   └── main.tsx               # Root React entrypoint
 │   ├── package.json               # Frontend dependencies & scripts
-│   └── vite.config.ts             # Vite configuration
+│   └── vite.config.ts             # Vite build configuration
 │
-└── README.md                      # Project documentation
+└── README.md                      # Platform documentation
 ```
 
 ---
