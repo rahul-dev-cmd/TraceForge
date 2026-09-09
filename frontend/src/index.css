@@ -1,0 +1,102 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+  
+  body {
+    background-color: #0a0a0a;
+    color: #33ff00;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+    text-transform: uppercase;
+  }
+
+  /* Custom terminal scrollbar */
+  ::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #0a0a0a;
+    border-left: 1px solid #1f521f;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #33ff00;
+    border: 1px solid #0a0a0a;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #ffb000;
+  }
+  
+  /* Inputs shouldn't be uppercase by default if they are passwords/urls etc, but we'll manage that per component or let them inherit and override if needed */
+  input, textarea {
+    text-transform: none;
+  }
+}
+
+/* CRT Scanlines Overlay */
+.crt-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: linear-gradient(
+    rgba(18, 16, 16, 0) 50%,
+    rgba(0, 0, 0, 0.25) 50%
+  );
+  background-size: 100% 4px;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* Terminal Node glows (phosphor effect) */
+.glow-critical {
+  text-shadow: 0 0 5px rgba(255, 51, 51, 0.8);
+}
+.glow-high {
+  text-shadow: 0 0 5px rgba(255, 176, 0, 0.8);
+}
+.glow-medium {
+  text-shadow: 0 0 5px rgba(255, 255, 0, 0.8);
+}
+.glow-low {
+  text-shadow: 0 0 5px rgba(51, 255, 0, 0.8);
+}
+.glow-cyber {
+  text-shadow: 0 0 5px rgba(51, 255, 0, 0.8);
+}
+
+/* React Flow custom tweaks */
+.react-flow__background {
+  background-color: #0a0a0a !important;
+}
+
+.react-flow__controls {
+  box-shadow: none !important;
+  border: 1px solid #33ff00 !important;
+  border-radius: 0px !important;
+  overflow: hidden !important;
+  background: #0a0a0a !important;
+}
+
+.react-flow__controls-button {
+  background: #0a0a0a !important;
+  border-bottom: 1px solid #1f521f !important;
+  color: #33ff00 !important;
+  fill: #33ff00 !important;
+  border-radius: 0px !important;
+}
+
+.react-flow__controls-button:hover {
+  background: #33ff00 !important;
+  color: #0a0a0a !important;
+  fill: #0a0a0a !important;
+}
+
+.react-flow__attribution {
+  display: none !important;
+}
