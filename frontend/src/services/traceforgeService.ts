@@ -1,4 +1,4 @@
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
+export const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
 
 export interface AttributionSource {
   title: string;
@@ -140,5 +140,19 @@ export const traceforgeService = {
     const res = await fetch(`${API_BASE}/wallets/${address}`);
     if (!res.ok) throw new Error("Failed to fetch wallet details");
     return res.json();
+  },
+  async getReport(address: string): Promise<Blob> {
+    const res = await fetch(`${API_BASE}/report/${address}`);
+    if (!res.ok) {
+      let message = `Failed to generate report (${res.status})`;
+      try {
+        const errJson = await res.json();
+        if (errJson.detail) message = errJson.detail;
+      } catch {
+        // response may not be JSON
+      }
+      throw new Error(message);
+    }
+    return res.blob();
   },
 };

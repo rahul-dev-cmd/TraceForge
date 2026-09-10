@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { useActiveWallet } from '../context/ActiveWalletContext';
 import {
   Search, Network, Wallet, Users, ArrowLeftRight, ShieldAlert,
   Bell, Lock, History, Building2, Sparkles, FileText, Settings,
@@ -2242,6 +2243,46 @@ export const CopilotPage: React.FC = () => {
    12. FORENSIC REPORTS PAGE
 ════════════════════════════════════════════════════════════════════ */
 export const ForensicReportsPage: React.FC = () => {
+  const { activeWallet } = useActiveWallet();
+  const [searchParams] = useSearchParams();
+  const targetAddress = (activeWallet || searchParams.get('address') || '').trim();
+
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  const handleGenerateReport = async (addressToUse?: string) => {
+    const address = (addressToUse || targetAddress).trim();
+
+    if (!address) {
+      setError('No active target wallet selected. Please select or inspect a wallet in Live Trace or Wallets Directory first.');
+      return;
+    }
+
+    setIsGenerating(true);
+    setError(null);
+    setSuccessMessage(null);
+
+    try {
+      const blob = await traceforgeService.getReport(address);
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = `report-${address}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+
+      setSuccessMessage(`Forensic audit report for ${address.slice(0, 8)}...${address.slice(-6)} successfully generated and downloaded.`);
+    } catch (err: any) {
+      console.error('Failed to generate report:', err);
+      setError(err.message || 'Failed to generate PDF report from backend. Ensure the wallet has been ingested.');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   const reports = [
     {
       id: 'RPT-2026-001', title: 'Mumbai Hospital Ransomware — Complete Forensic Dossier',
@@ -2265,9 +2306,9 @@ export const ForensicReportsPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between p-5 rounded-none bg-background shadow-none bg-background border border-terminal-muted">
+      <div className="flex flex-col md:flex-row md:items-center justify-between p-5 rounded-none bg-background shadow-none border border-terminal-muted gap-4">
         <div>
-          <div className="flex items-center gap-2 font-mono text-xs text-terminal-primary font-bold uppercase uppercase tracking-wider mb-1">
+          <div className="flex items-center gap-2 font-mono text-xs text-terminal-primary font-bold uppercase tracking-wider mb-1">
             <FileText className="w-4 h-4" />
             Forensic Intelligence Reports
           </div>
@@ -2278,11 +2319,88 @@ export const ForensicReportsPage: React.FC = () => {
             Court-admissible forensic intelligence reports for law enforcement, financial regulators, and judicial proceedings.
           </p>
         </div>
-        <Button className="bg-terminal-primary hover:bg-terminal-primary text-background font-bold text-xs">
-          <Plus className="w-4 h-4 mr-1.5" />
-          Generate Report
-        </Button>
+
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+          {targetAddress ? (
+            <div className="flex items-center gap-2 px-2.5 py-1.5 border border-terminal-primary/40 bg-terminal-primary/10 font-mono text-xs">
+              <span className="w-2 h-2 bg-terminal-primary animate-pulse shrink-0" />
+              <span className="text-terminal-muted text-[10px]">ACTIVE TARGET:</span>
+              <span className="text-terminal-primary font-bold">
+                {targetAddress.slice(0, 6)}...{targetAddress.slice(-4)}
+              </span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 px-2.5 py-1.5 border border-amber-500/40 bg-amber-950/20 font-mono text-[11px] text-amber-400">
+              <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+              <span>NO ACTIVE TARGET SELECTED</span>
+            </div>
+          )}
+
+          <Button
+            onClick={() => handleGenerateReport()}
+            disabled={!targetAddress || isGenerating}
+            title={
+              !targetAddress
+                ? 'No active target wallet selected. Select or inspect a wallet first to generate its forensic report.'
+                : `Generate and download court-admissible PDF report for ${targetAddress}`
+            }
+            className={`font-mono text-xs font-bold transition-colors ${
+              !targetAddress
+                ? 'opacity-50 cursor-not-allowed bg-slate-800 text-slate-500 border border-slate-700'
+                : 'bg-terminal-primary hover:bg-terminal-primary/90 text-background'
+            }`}
+          >
+            {isGenerating ? (
+              <>
+                <RefreshCw className="w-4 h-4 mr-1.5 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <Download className="w-4 h-4 mr-1.5" />
+                Generate Report
+              </>
+            )}
+          </Button>
+        </div>
       </div>
+
+      {/* Error notification banner */}
+      {error && (
+        <div className="flex items-start justify-between p-3.5 rounded-none bg-red-950/80 border border-red-500/60 text-red-200 font-mono text-xs">
+          <div className="flex items-start gap-2.5">
+            <AlertTriangle className="w-4 h-4 text-red-400 shrink-0 mt-0.5" />
+            <div>
+              <div className="font-bold text-red-300 uppercase tracking-wide">Report Generation Error</div>
+              <div className="text-red-200/90 mt-0.5">{error}</div>
+            </div>
+          </div>
+          <button
+            onClick={() => setError(null)}
+            className="text-red-400 hover:text-red-200 p-1"
+            title="Dismiss error"
+          >
+            <XCircle className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* Success notification banner */}
+      {successMessage && (
+        <div className="flex items-center justify-between p-3.5 rounded-none bg-emerald-950/80 border border-emerald-500/60 text-emerald-200 font-mono text-xs">
+          <div className="flex items-center gap-2.5">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span>{successMessage}</span>
+          </div>
+          <button
+            onClick={() => setSuccessMessage(null)}
+            className="text-emerald-400 hover:text-emerald-200 p-1"
+            title="Dismiss"
+          >
+            <XCircle className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {reports.map(report => (
@@ -2338,7 +2456,11 @@ export const ForensicReportsPage: React.FC = () => {
                 <Eye className="w-3.5 h-3.5 mr-1.5" />
                 Preview
               </Button>
-              <Button className="flex-1 bg-terminal-primary hover:bg-terminal-primary text-background font-bold text-xs">
+              <Button
+                onClick={() => handleGenerateReport()}
+                disabled={!targetAddress || isGenerating}
+                className="flex-1 bg-terminal-primary hover:bg-terminal-primary text-background font-bold text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+              >
                 <Download className="w-3.5 h-3.5 mr-1.5" />
                 Export PDF
               </Button>
