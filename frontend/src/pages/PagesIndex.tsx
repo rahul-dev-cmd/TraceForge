@@ -9,7 +9,7 @@ import {
   TrendingUp, BarChart3, Zap, Target, Globe, Shield,
   ChevronRight, RefreshCw, Copy, Check, Info, XCircle,
   User, Calendar, Hash, Terminal, Bot, Layers, Database,
-  Cpu, Wifi, Star, Flag, BookOpen, Tag, Fingerprint
+  Cpu, Wifi, Star, Flag, BookOpen, Tag, Fingerprint, Trash2
 } from 'lucide-react';
 import { TransactionGraph } from '../components/graph/TransactionGraph';
 import { CopilotChat } from '../components/ai/CopilotChat';
@@ -2242,123 +2242,292 @@ export const CopilotPage: React.FC = () => {
 /* ════════════════════════════════════════════════════════════════════
    12. FORENSIC REPORTS PAGE
 ════════════════════════════════════════════════════════════════════ */
-export const ForensicReportsPage: React.FC = () => {
-  const { activeWallet } = useActiveWallet();
-  const [searchParams] = useSearchParams();
-  const targetAddress = (activeWallet || searchParams.get('address') || '').trim();
+interface ForensicReportItem {
+  id: string;
+  title: string;
+  caseId: string;
+  type: string;
+  status: string;
+  pages: number;
+  preparedBy: string;
+  date: string;
+  address?: string;
+  sections: string[];
+}
 
+const DEFAULT_REPORTS: ForensicReportItem[] = [
+  {
+    id: 'RPT-2026-001', title: 'Mumbai Hospital Ransomware — Complete Forensic Dossier',
+    caseId: 'CASE-2026-0142', type: 'Full Investigation Report', status: 'FINAL',
+    pages: 42, preparedBy: 'Insp. Vikram Rathore', date: '2026-08-20',
+    address: '0xde0b295669a9fd93d5f28d9ec85e40f4cb697bae',
+    sections: ['Executive Summary', 'Transaction Trail', 'Wallet Cluster Analysis', 'Cross-Chain Tracing', 'Evidence Log', 'Legal Recommendations']
+  },
+  {
+    id: 'RPT-2026-002', title: 'Pig Butchering Syndicate — Behavioral Analysis',
+    caseId: 'CASE-2026-0219', type: 'Intelligence Report', status: 'DRAFT',
+    pages: 18, preparedBy: 'Sub-Insp. Priya Nair', date: '2026-08-19',
+    sections: ['Summary', 'Victim Analysis', 'Suspect Wallet Network', 'Recommendations']
+  },
+  {
+    id: 'RPT-2026-003', title: 'DeFi Flash Loan Attack — Technical Forensic Report',
+    caseId: 'CASE-2026-0331', type: 'Technical Report', status: 'UNDER_REVIEW',
+    pages: 28, preparedBy: 'Dr. Arjun Mehta', date: '2026-08-18',
+    sections: ['Smart Contract Analysis', 'Attack Vector Reconstruction', 'Fund Flow Trace', 'Evidence']
+  },
+];
+
+const REPORTS_STORAGE_KEY = 'traceforge_saved_reports';
+
+export const ForensicReportsPage: React.FC = () => {
+  const { activeWallet, setActiveWallet } = useActiveWallet();
+  const [searchParams] = useSearchParams();
+  const activeTargetAddress = (activeWallet || searchParams.get('address') || '').trim();
+
+  const [inputAddress, setInputAddress] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const handleGenerateReport = async (addressToUse?: string) => {
-    const address = (addressToUse || targetAddress).trim();
+  // Persistent report archive
+  const [reports, setReports] = useState<ForensicReportItem[]>(() => {
+    try {
+      const saved = localStorage.getItem(REPORTS_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.warn('Failed to load saved reports:', e);
+    }
+    return DEFAULT_REPORTS;
+  });
 
-    if (!address) {
-      setError('No active target wallet selected. Please select or inspect a wallet in Live Trace or Wallets Directory first.');
+  const saveReports = (newReports: ForensicReportItem[]) => {
+    setReports(newReports);
+    try {
+      localStorage.setItem(REPORTS_STORAGE_KEY, JSON.stringify(newReports));
+    } catch (e) {
+      console.warn('Failed to save reports to localStorage:', e);
+    }
+  };
+
+  const effectiveAddress = (inputAddress.trim() || activeTargetAddress).trim();
+
+  // Paste from clipboard helper
+  const handlePaste = async () => {
+    try {
+      if (navigator.clipboard?.readText) {
+        const text = await navigator.clipboard.readText();
+        if (text) setInputAddress(text.trim());
+      }
+    } catch {
+      // ignore clipboard error
+    }
+  };
+
+  // Generate and archive a report
+  const handleGenerateReport = async (addressToUse?: string, cardActionId?: string) => {
+    const rawAddress = (addressToUse || effectiveAddress).trim();
+
+    if (!rawAddress) {
+      setError('Please paste or enter an Ethereum wallet address, or select an active target.');
       return;
     }
 
+    if (!rawAddress.startsWith('0x') || rawAddress.length !== 42) {
+      setError(`Invalid address "${rawAddress}". Must be a 42-character Ethereum hex address starting with 0x.`);
+      return;
+    }
+
+    const cleanAddress = rawAddress.toLowerCase();
     setIsGenerating(true);
+    if (cardActionId) setActionLoadingId(cardActionId);
     setError(null);
     setSuccessMessage(null);
 
     try {
-      const blob = await traceforgeService.getReport(address);
+      const blob = await traceforgeService.getReport(cleanAddress);
       const downloadUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = downloadUrl;
-      link.download = `report-${address}.pdf`;
+      link.download = `report-${cleanAddress}.pdf`;
       document.body.appendChild(link);
       link.click();
       link.remove();
       window.URL.revokeObjectURL(downloadUrl);
 
-      setSuccessMessage(`Forensic audit report for ${address.slice(0, 8)}...${address.slice(-6)} successfully generated and downloaded.`);
+      // Save report in archive
+      const existingIndex = reports.findIndex(r => r.address?.toLowerCase() === cleanAddress);
+      let updatedReports: ForensicReportItem[];
+
+      if (existingIndex >= 0) {
+        const existing = reports[existingIndex];
+        const updated = {
+          ...existing,
+          date: new Date().toISOString().split('T')[0],
+          status: 'FINAL',
+        };
+        updatedReports = [updated, ...reports.filter((_, idx) => idx !== existingIndex)];
+      } else {
+        const nextNum = reports.length + 1;
+        const newReport: ForensicReportItem = {
+          id: `RPT-2026-${String(nextNum).padStart(3, '0')}`,
+          title: `Forensic Intelligence Audit — ${cleanAddress.slice(0, 10)}...${cleanAddress.slice(-8)}`,
+          caseId: `CASE-${cleanAddress.slice(2, 8).toUpperCase()}`,
+          type: 'Automated AML Audit Report',
+          status: 'FINAL',
+          pages: 14,
+          preparedBy: 'TraceForge Forensics Engine',
+          date: new Date().toISOString().split('T')[0],
+          address: cleanAddress,
+          sections: ['Executive Summary', 'Transaction Trail', 'Wallet Cluster Analysis', 'Heuristic Flags', 'Audit Evidence Log']
+        };
+        updatedReports = [newReport, ...reports];
+      }
+
+      saveReports(updatedReports);
+      if (!activeWallet) setActiveWallet(cleanAddress);
+
+      setSuccessMessage(`Forensic report for ${cleanAddress.slice(0, 8)}...${cleanAddress.slice(-6)} successfully generated, downloaded, and saved to archive.`);
     } catch (err: any) {
       console.error('Failed to generate report:', err);
       setError(err.message || 'Failed to generate PDF report from backend. Ensure the wallet has been ingested.');
     } finally {
       setIsGenerating(false);
+      setActionLoadingId(null);
     }
   };
 
-  const reports = [
-    {
-      id: 'RPT-2026-001', title: 'Mumbai Hospital Ransomware — Complete Forensic Dossier',
-      caseId: 'CASE-2026-0142', type: 'Full Investigation Report', status: 'FINAL',
-      pages: 42, preparedBy: 'Insp. Vikram Rathore', date: '2026-08-20',
-      sections: ['Executive Summary', 'Transaction Trail', 'Wallet Cluster Analysis', 'Cross-Chain Tracing', 'Evidence Log', 'Legal Recommendations']
-    },
-    {
-      id: 'RPT-2026-002', title: 'Pig Butchering Syndicate — Behavioral Analysis',
-      caseId: 'CASE-2026-0219', type: 'Intelligence Report', status: 'DRAFT',
-      pages: 18, preparedBy: 'Sub-Insp. Priya Nair', date: '2026-08-19',
-      sections: ['Summary', 'Victim Analysis', 'Suspect Wallet Network', 'Recommendations']
-    },
-    {
-      id: 'RPT-2026-003', title: 'DeFi Flash Loan Attack — Technical Forensic Report',
-      caseId: 'CASE-2026-0331', type: 'Technical Report', status: 'UNDER_REVIEW',
-      pages: 28, preparedBy: 'Dr. Arjun Mehta', date: '2026-08-18',
-      sections: ['Smart Contract Analysis', 'Attack Vector Reconstruction', 'Fund Flow Trace', 'Evidence']
-    },
-  ];
+  // Preview in new browser tab
+  const handlePreviewReport = async (report: ForensicReportItem) => {
+    const address = (report.address || effectiveAddress).trim();
+    if (!address) {
+      setError(`No wallet address attached to ${report.id}. Please paste a wallet address above to preview.`);
+      return;
+    }
+
+    setActionLoadingId(`preview-${report.id}`);
+    setError(null);
+
+    try {
+      const blob = await traceforgeService.getReport(address);
+      const blobUrl = window.URL.createObjectURL(blob);
+      window.open(blobUrl, '_blank');
+    } catch (err: any) {
+      console.error('Failed to preview report:', err);
+      setError(err.message || `Failed to preview report for ${report.id}.`);
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  // Delete an archived card from local storage
+  const handleDeleteReport = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const updated = reports.filter(r => r.id !== id);
+    saveReports(updated);
+  };
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between p-5 rounded-none bg-background shadow-none border border-terminal-muted gap-4">
-        <div>
-          <div className="flex items-center gap-2 font-mono text-xs text-terminal-primary font-bold uppercase tracking-wider mb-1">
-            <FileText className="w-4 h-4" />
-            Forensic Intelligence Reports
-          </div>
-          <h1 className="text-2xl font-bold uppercase tracking-widest text-terminal-primary tracking-tight font-mono">
-            Forensic Report Generator
-          </h1>
-          <p className="text-xs text-terminal-muted font-mono mt-1">
-            Court-admissible forensic intelligence reports for law enforcement, financial regulators, and judicial proceedings.
-          </p>
+      {/* Header Panel */}
+      <div className="p-5 rounded-none bg-background shadow-none border border-terminal-muted space-y-1">
+        <div className="flex items-center gap-2 font-mono text-xs text-terminal-primary font-bold uppercase tracking-wider mb-1">
+          <FileText className="w-4 h-4" />
+          Forensic Intelligence Reports
         </div>
+        <h1 className="text-2xl font-bold uppercase tracking-widest text-terminal-primary tracking-tight font-mono">
+          Forensic Report Generator & Dossier Archive
+        </h1>
+        <p className="text-xs text-terminal-muted font-mono mt-1">
+          Court-admissible forensic intelligence reports for law enforcement, financial regulators, and judicial proceedings.
+        </p>
+      </div>
 
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-          {targetAddress ? (
-            <div className="flex items-center gap-2 px-2.5 py-1.5 border border-terminal-primary/40 bg-terminal-primary/10 font-mono text-xs">
-              <span className="w-2 h-2 bg-terminal-primary animate-pulse shrink-0" />
-              <span className="text-terminal-muted text-[10px]">ACTIVE TARGET:</span>
-              <span className="text-terminal-primary font-bold">
-                {targetAddress.slice(0, 6)}...{targetAddress.slice(-4)}
-              </span>
-            </div>
-          ) : (
-            <div className="flex items-center gap-1.5 px-2.5 py-1.5 border border-amber-500/40 bg-amber-950/20 font-mono text-[11px] text-amber-400">
-              <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-              <span>NO ACTIVE TARGET SELECTED</span>
+      {/* Manual Wallet Input & Generator Card */}
+      <div className="p-5 rounded-none bg-background border border-terminal-muted space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-terminal-muted pb-3">
+          <div className="font-mono text-xs font-bold text-terminal-primary flex items-center gap-2 uppercase tracking-wide">
+            <Fingerprint className="w-4 h-4 text-terminal-primary" />
+            <span>Generate & Save Forensic Audit Dossier</span>
+          </div>
+
+          {activeTargetAddress && (
+            <div className="flex items-center gap-2 font-mono text-xs">
+              <span className="text-terminal-muted text-[11px]">ACTIVE TARGET:</span>
+              <span className="text-terminal-primary font-bold">{activeTargetAddress.slice(0, 6)}...{activeTargetAddress.slice(-4)}</span>
+              <button
+                type="button"
+                onClick={() => setInputAddress(activeTargetAddress)}
+                className="text-[10px] uppercase font-bold text-terminal-primary underline hover:text-terminal-primary/80"
+              >
+                [ USE TARGET ]
+              </button>
             </div>
           )}
+        </div>
+
+        <div className="flex flex-col lg:flex-row items-stretch gap-3">
+          <div className="flex-1 flex items-center border border-terminal-muted bg-slate-950/60 focus-within:border-terminal-primary transition-colors">
+            <div className="px-3 py-2 text-terminal-muted font-mono text-xs select-none">
+              0x
+            </div>
+            <input
+              type="text"
+              value={inputAddress.startsWith('0x') ? inputAddress.slice(2) : inputAddress}
+              onChange={(e) => {
+                const val = e.target.value.trim();
+                setInputAddress(val ? (val.startsWith('0x') ? val : `0x${val}`) : '');
+              }}
+              placeholder="Paste or type Ethereum wallet address (0x...) to generate & save report"
+              className="flex-1 bg-transparent border-none py-2 pr-3 text-terminal-primary font-mono text-xs placeholder:text-terminal-muted/50 focus:outline-none"
+            />
+            {inputAddress && (
+              <button
+                type="button"
+                onClick={() => setInputAddress('')}
+                className="px-2.5 text-terminal-muted hover:text-terminal-primary text-xs font-mono"
+                title="Clear input"
+              >
+                CLEAR
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={handlePaste}
+              className="px-3 py-2 border-l border-terminal-muted bg-slate-900/60 hover:bg-slate-800 text-terminal-primary text-xs font-mono font-bold flex items-center gap-1.5 transition-colors"
+              title="Paste from clipboard"
+            >
+              <Copy className="w-3.5 h-3.5" />
+              <span>PASTE</span>
+            </button>
+          </div>
 
           <Button
             onClick={() => handleGenerateReport()}
-            disabled={!targetAddress || isGenerating}
+            disabled={!effectiveAddress || isGenerating}
             title={
-              !targetAddress
-                ? 'No active target wallet selected. Select or inspect a wallet first to generate its forensic report.'
-                : `Generate and download court-admissible PDF report for ${targetAddress}`
+              !effectiveAddress
+                ? 'Enter or paste a wallet address (or select an active target) to generate its forensic report.'
+                : `Generate, download, and archive court-admissible PDF report for ${effectiveAddress}`
             }
-            className={`font-mono text-xs font-bold transition-colors ${
-              !targetAddress
+            className={`font-mono text-xs font-bold whitespace-nowrap transition-colors px-5 py-2.5 ${
+              !effectiveAddress
                 ? 'opacity-50 cursor-not-allowed bg-slate-800 text-slate-500 border border-slate-700'
                 : 'bg-terminal-primary hover:bg-terminal-primary/90 text-background'
             }`}
           >
-            {isGenerating ? (
+            {isGenerating && !actionLoadingId ? (
               <>
                 <RefreshCw className="w-4 h-4 mr-1.5 animate-spin" />
-                Generating...
+                Generating & Archiving...
               </>
             ) : (
               <>
                 <Download className="w-4 h-4 mr-1.5" />
-                Generate Report
+                Generate & Save Report
               </>
             )}
           </Button>
@@ -2402,71 +2571,151 @@ export const ForensicReportsPage: React.FC = () => {
         </div>
       )}
 
+      {/* Archive Header */}
+      <div className="flex items-center justify-between font-mono text-xs text-terminal-muted border-b border-terminal-muted pb-2">
+        <div className="flex items-center gap-2">
+          <FileText className="w-4 h-4 text-terminal-primary" />
+          <span className="font-bold uppercase text-terminal-primary">
+            ARCHIVED DOSSIERS & REPORTS ({reports.length})
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={() => saveReports(DEFAULT_REPORTS)}
+          className="text-[10px] text-terminal-muted hover:text-terminal-primary uppercase underline"
+        >
+          [ Reset Default Templates ]
+        </button>
+      </div>
+
+      {/* Reports Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {reports.map(report => (
-          <div key={report.id} className="p-5 rounded-none bg-background shadow-none border border-terminal-muted hover:border-cyan-500/30 transition-all space-y-4">
-            {/* Header */}
-            <div className="flex items-start justify-between">
-              <div className="flex-1 min-w-0 pr-3">
-                <div className="flex items-center gap-2 mb-1 font-mono text-xs">
-                  <span className="text-terminal-muted">{report.id}</span>
-                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                    report.status === 'FINAL' ? 'bg-emerald-950 text-emerald-300 border border-emerald-500/30' :
-                    report.status === 'DRAFT' ? 'bg-amber-950 text-amber-300 border border-amber-500/30' :
-                    'bg-blue-950 text-blue-300 border border-blue-500/30'
-                  }`}>
-                    {report.status}
-                  </span>
+        {reports.map(report => {
+          const isPreviewing = actionLoadingId === `preview-${report.id}`;
+          const isExporting = actionLoadingId === `export-${report.id}`;
+          const hasAddress = Boolean(report.address);
+
+          return (
+            <div key={report.id} className="p-5 rounded-none bg-background shadow-none border border-terminal-muted hover:border-terminal-primary/40 transition-all space-y-4">
+              {/* Header */}
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0 pr-3">
+                  <div className="flex items-center gap-2 mb-1 font-mono text-xs">
+                    <span className="text-terminal-muted">{report.id}</span>
+                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                      report.status === 'FINAL' ? 'bg-emerald-950 text-emerald-300 border border-emerald-500/30' :
+                      report.status === 'DRAFT' ? 'bg-amber-950 text-amber-300 border border-amber-500/30' :
+                      'bg-blue-950 text-blue-300 border border-blue-500/30'
+                    }`}>
+                      {report.status}
+                    </span>
+                    {hasAddress && (
+                      <span className="px-1.5 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-500/30 text-[9px] font-bold">
+                        AUDITED
+                      </span>
+                    )}
+                  </div>
+                  <div className="font-bold text-terminal-primary font-mono text-sm line-clamp-2">{report.title}</div>
                 </div>
-                <div className="font-bold text-terminal-primary font-mono text-sm line-clamp-2">{report.title}</div>
-              </div>
-            </div>
 
-            {/* Metadata */}
-            <div className="space-y-1.5 font-mono text-xs text-terminal-muted">
-              <div className="flex items-center gap-2">
-                <FileText className="w-3.5 h-3.5 text-slate-600" />
-                <span>{report.type} · {report.pages} pages</span>
+                {hasAddress && (
+                  <button
+                    onClick={(e) => handleDeleteReport(report.id, e)}
+                    className="text-terminal-muted hover:text-terminal-error p-1 transition-colors"
+                    title="Remove from archived dossiers"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
-              <div className="flex items-center gap-2">
-                <User className="w-3.5 h-3.5 text-slate-600" />
-                <span>{report.preparedBy}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Calendar className="w-3.5 h-3.5 text-slate-600" />
-                <span>{report.date}</span>
-              </div>
-            </div>
 
-            {/* Sections */}
-            <div>
-              <div className="text-[10px] font-mono text-terminal-muted uppercase mb-1.5">Included Sections</div>
-              <div className="flex flex-wrap gap-1">
-                {report.sections.map(s => (
-                  <span key={s} className="px-1.5 py-0.5 rounded bg-slate-800 border border-terminal-muted text-[10px] font-mono text-terminal-primary">
-                    {s}
-                  </span>
-                ))}
+              {/* Target Address Pill if saved */}
+              {report.address && (
+                <div className="px-2 py-1 bg-slate-900 border border-terminal-muted font-mono text-[11px] text-terminal-primary flex items-center justify-between">
+                  <span className="truncate font-bold">WALLET: {report.address}</span>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard?.writeText(report.address!);
+                      setSuccessMessage(`Copied ${report.address} to clipboard.`);
+                    }}
+                    className="text-terminal-muted hover:text-terminal-primary ml-2 shrink-0"
+                    title="Copy wallet address"
+                  >
+                    <Copy className="w-3 h-3" />
+                  </button>
+                </div>
+              )}
+
+              {/* Metadata */}
+              <div className="space-y-1.5 font-mono text-xs text-terminal-muted">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-3.5 h-3.5 text-slate-600" />
+                  <span>{report.type} · {report.pages} pages</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <User className="w-3.5 h-3.5 text-slate-600" />
+                  <span>{report.preparedBy}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-3.5 h-3.5 text-slate-600" />
+                  <span>{report.date}</span>
+                </div>
+              </div>
+
+              {/* Sections */}
+              <div>
+                <div className="text-[10px] font-mono text-terminal-muted uppercase mb-1.5">Included Sections</div>
+                <div className="flex flex-wrap gap-1">
+                  {report.sections.map(s => (
+                    <span key={s} className="px-1.5 py-0.5 rounded bg-slate-800 border border-terminal-muted text-[10px] font-mono text-terminal-primary">
+                      {s}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-2 pt-2 border-t border-terminal-muted">
+                <Button
+                  onClick={() => handlePreviewReport(report)}
+                  disabled={(!report.address && !effectiveAddress) || isPreviewing}
+                  className="flex-1 bg-slate-800 hover:bg-slate-700 text-terminal-primary border border-terminal-muted text-xs font-bold disabled:opacity-50"
+                  title="Open PDF preview in a new browser tab"
+                >
+                  {isPreviewing ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                      Loading...
+                    </>
+                  ) : (
+                    <>
+                      <Eye className="w-3.5 h-3.5 mr-1.5" />
+                      Preview
+                    </>
+                  )}
+                </Button>
+                <Button
+                  onClick={() => handleGenerateReport(report.address || effectiveAddress, `export-${report.id}`)}
+                  disabled={(!report.address && !effectiveAddress) || isExporting}
+                  className="flex-1 bg-terminal-primary hover:bg-terminal-primary text-background font-bold text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Download court-admissible PDF file"
+                >
+                  {isExporting ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                      Exporting...
+                    </>
+                  ) : (
+                    <>
+                      <Download className="w-3.5 h-3.5 mr-1.5" />
+                      Export PDF
+                    </>
+                  )}
+                </Button>
               </div>
             </div>
-
-            {/* Actions */}
-            <div className="flex gap-2 pt-2 border-t border-terminal-muted">
-              <Button className="flex-1 bg-slate-800 hover:bg-slate-700 text-terminal-primary border border-terminal-muted text-xs font-bold">
-                <Eye className="w-3.5 h-3.5 mr-1.5" />
-                Preview
-              </Button>
-              <Button
-                onClick={() => handleGenerateReport()}
-                disabled={!targetAddress || isGenerating}
-                className="flex-1 bg-terminal-primary hover:bg-terminal-primary text-background font-bold text-xs disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Download className="w-3.5 h-3.5 mr-1.5" />
-                Export PDF
-              </Button>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
